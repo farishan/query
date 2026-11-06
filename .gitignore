@@ -7,3 +7,6 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+# Zed generated grammar artifacts
+zed-extension/grammars/
+*.wasm
