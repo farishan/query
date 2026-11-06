@@ -3,4 +3,4 @@
 (section) @type
 (setting) @property
 (comment) @comment @spell
-(sql_line) @embedded
+(sql_line) @string

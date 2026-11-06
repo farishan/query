@@ -63,7 +63,8 @@ defaults and pretty output.
 
 This repository also ships a Zed extension providing language support for
 `Queryfile` (syntax highlighting, comments, brackets). Install it as a dev
-extension via `zed: install dev extension` and select this directory, or
+extension via `zed: install dev extension` and select the `zed-extension/`
+directory, or
 install from the Zed extensions registry once published.
 
 ## Alternatives

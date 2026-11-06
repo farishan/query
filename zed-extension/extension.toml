@@ -2,7 +2,7 @@ id = "queryfile"
 name = "Queryfile"
 version = "0.0.1"
 schema_version = 1
-authors = ["Faris Han <farishan@users.noreply.github.com>"]
+authors = ["Faris Han <farishanugraha@gmail.com>"]
 description = "Language support for Queryfile: named, runnable SQL queries"
 repository = "https://github.com/farishan/query"
 
