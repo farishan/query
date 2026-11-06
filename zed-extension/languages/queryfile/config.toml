@@ -1,4 +1,5 @@
 name = "Queryfile"
 grammar = "queryfile"
-path_suffixes = ["Queryfile"]
+path_suffixes = ["Queryfile", "queryfile"]
+first_line_pattern = "^#\\s*Queryfile"
 line_comments = ["# ", "; "]
