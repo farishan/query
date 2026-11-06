@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+# `query` — Makefile-like runner for saved DB queries.
+#
+# Usage:
+#   query                  list available queries
+#   query <name>           run queries/<name>.sql (or a [name] block in Queryfile)
+#   query list             same as no args
+#   query show <name>      print the SQL for <name>
+#   query run <name>       (alias)
+#   query init             scaffold queries/ + Queryfile in the current dir
+#   query help             show this help
+#
+# Project root is found by walking up from $PWD for a "queries/" dir or a "Queryfile".
+
+set -euo pipefail
+
+find_root() {
+  local dir="$PWD"
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/Queryfile" ] || [ -d "$dir/queries" ]; then
+      echo "$dir"; return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+# Defaults (overridden by Queryfile)
+DB=""
+ENGINE=""
+OUTPUT="default"
+
+load_config() {
+  local root="$1"
+  local qf="$root/Queryfile"
+  [ -f "$qf" ] || return 0
+  # Parse simple KEY=VALUE lines (ignore comments/blank lines)
+  while IFS='=' read -r key val; do
+    key="${key%%#*}"; key="$(echo "$key" | tr -d '[:space:]')"
+    val="$(echo "$val" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [ -z "$key" ] && continue
+    case "$key" in
+      DB) DB="$val" ;;
+      ENGINE) ENGINE="$val" ;;
+      OUTPUT) OUTPUT="$val" ;;
+    esac
+  done < "$qf"
+}
+
+ROOT=""
+if ROOT="$(find_root 2>/dev/null)"; then
+  load_config "$ROOT"
+fi
+
+# Resolve DB path
+resolve_db() {
+  local root="$1"
+  if [ -n "$DB" ]; then
+    case "$DB" in
+      /*) echo "$DB" ;;
+      *)  echo "$root/$DB" ;;
+    esac
+    return
+  fi
+  for cand in "$root/data/research.db" "$root/data/app.db" "$root/data/db.sqlite" "$root/data/db.sqlite3"; do
+    if [ -f "$cand" ]; then echo "$cand"; return; fi
+  done
+  find "$root/data" -maxdepth 1 -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) 2>/dev/null | head -n1
+}
+
+run_query() {
+  local file="$1"
+  local db="$2"
+  local engine="${ENGINE:-}"
+  if [ -z "$engine" ]; then
+    if command -v usql >/dev/null 2>&1; then engine="usql"; else engine="sqlite3"; fi
+  fi
+  case "$engine" in
+    usql)
+      if ! command -v usql >/dev/null 2>&1; then
+        echo "query: ENGINE=usql but usql not found; falling back to sqlite3" >&2
+        engine="sqlite3"
+      fi
+      ;;
+  esac
+  case "$engine" in
+    usql)
+      local flags=()
+      case "${OUTPUT:-default}" in
+        json) flags+=(-J) ;;
+        csv) flags+=(-C) ;;
+        markdown) flags+=(-M) ;;
+        box) flags+=() ;; # usql default aligned; box not native
+      esac
+      usql "${flags[@]}" -f "$file" "$db"
+      ;;
+    sqlite3)
+      local flags=(-header -column)
+      case "${OUTPUT:-default}" in
+        json) flags=(-json) ;;
+        csv) flags=(-csv -header) ;;
+        markdown) flags=(-markdown -header) ;;
+        box) flags=(-box -header) ;;
+      esac
+      sqlite3 "${flags[@]}" "$db" < "$file"
+      ;;
+    *)
+      echo "query: unknown ENGINE '$engine'" >&2; exit 1
+      ;;
+  esac
+}
+
+list_queries() {
+  # From queries/*.sql
+  if [ -d "$ROOT/queries" ]; then
+    for f in "$ROOT/queries"/*.sql; do
+      [ -e "$f" ] || continue
+      basename "$f" .sql
+    done
+  fi
+  # From Queryfile [sections]
+  if [ -f "$ROOT/Queryfile" ]; then
+    grep -E '^\[[^]]+\]$' "$ROOT/Queryfile" 2>/dev/null | sed 's/^\[//;s/\]$//' || true
+  fi
+}
+
+get_sql_file() {
+  local name="$1"
+  local root="$2"
+  if [ -f "$root/queries/$name.sql" ]; then
+    echo "$root/queries/$name.sql"; return 0
+  fi
+  # Try extracting a [name] section from Queryfile into a temp file
+  if [ -f "$root/Queryfile" ] && grep -q "^\[$name\]$" "$root/Queryfile"; then
+    local tmp
+    tmp="$(mktemp)"
+    awk -v sec="[$name]" '
+      $0 == sec { insec=1; next }
+      /^\[/ { insec=0 }
+      insec && !/^[[:space:]]*#/ { print }
+    ' "$root/Queryfile" > "$tmp"
+    echo "$tmp"; return 0
+  fi
+  return 1
+}
+
+cmd="${1:-list}"
+case "$cmd" in
+  init)
+    target="${2:-$PWD}"
+    mkdir -p "$target/queries"
+    if [ ! -f "$target/Queryfile" ]; then
+      cat > "$target/Queryfile" <<'EOF'
+# Queryfile — config + named queries for the `query` runner
+# Docs: https://github.com/farishan/query
+
+# Path to your database (relative to project root). Leave blank to auto-detect
+# the first *.db / *.sqlite* file under data/.
+DB=
+ENGINE=usql
+OUTPUT=default
+
+# Named queries (alternative to files in queries/). Format:
+# [name]
+# <SQL>
+#
+# [tables]
+# SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;
+EOF
+    fi
+    # example queries if dir empty
+    if [ -z "$(ls -A "$target/queries" 2>/dev/null)" ]; then
+      cat > "$target/queries/tables.sql" <<'EOF'
+SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;
+EOF
+      cat > "$target/queries/integrity-check.sql" <<'EOF'
+PRAGMA integrity_check;
+EOF
+    fi
+    echo "Initialized query runner in $target"
+    echo "  queries/  -> add .sql files here"
+    echo "  Queryfile -> config + inline queries"
+    ;;
+  list|-l|--list|'')
+    if [ -z "$ROOT" ]; then
+      echo "query: no project root found (no queries/ or Queryfile). Run 'query init'." >&2; exit 1
+    fi
+    echo "Available queries ($ROOT):"
+    list_queries | sort -u | sed 's/^/  /'
+    echo
+    echo "Run:  query <name>"
+    echo "Show: query show <name>"
+    true
+    ;;
+  show|cat|-s|--show)
+    name="${2:-}"
+    [ -n "$name" ] || { echo "query: missing name" >&2; exit 1; }
+    [ -n "$ROOT" ] || { echo "query: no project root found" >&2; exit 1; }
+    file="$(get_sql_file "$name" "$ROOT")" || { echo "query: unknown query '$name'" >&2; exit 1; }
+    cat "$file"
+    ;;
+  run)
+    name="${2:-}"
+    [ -n "$name" ] || { echo "query: missing name" >&2; exit 1; }
+    [ -n "$ROOT" ] || { echo "query: no project root found" >&2; exit 1; }
+    file="$(get_sql_file "$name" "$ROOT")" || { echo "query: unknown query '$name' (try 'query list')" >&2; exit 1; }
+    db="$(resolve_db "$ROOT")"
+    [ -n "$db" ] && [ -f "$db" ] || { echo "query: no database found (set DB= in Queryfile)" >&2; exit 1; }
+    run_query "$file" "$db"
+    ;;
+  help|-h|--help)
+    sed -n '2,16p' "$0"
+    [ -n "$ROOT" ] && { echo; echo "Project root: $ROOT"; echo "Database:     $(resolve_db "$ROOT")"; echo "Engine:       ${ENGINE:-auto}"; }
+    ;;
+  *)
+    name="$cmd"
+    [ -n "$ROOT" ] || { echo "query: no project root found" >&2; exit 1; }
+    file="$(get_sql_file "$name" "$ROOT")" || { echo "query: unknown query '$name' (try 'query list')" >&2; exit 1; }
+    db="$(resolve_db "$ROOT")"
+    [ -n "$db" ] && [ -f "$db" ] || { echo "query: no database found (set DB= in Queryfile)" >&2; exit 1; }
+    run_query "$file" "$db"
+    ;;
+esac

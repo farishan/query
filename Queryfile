@@ -1,0 +1,4 @@
+# Queryfile — config + named queries for the query runner
+DB=
+ENGINE=usql
+OUTPUT=default
