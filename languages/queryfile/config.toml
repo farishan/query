@@ -1,0 +1,4 @@
+name = "Queryfile"
+grammar = "queryfile"
+path_suffixes = ["Queryfile"]
+line_comments = ["# ", "; "]

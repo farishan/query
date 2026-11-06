@@ -59,6 +59,24 @@ READMEs full of raw SQL are unreadable and un-runnable-by-name. `query` gives
 your database queries the same named-target DX as `make`/`just`, with sensible
 defaults and pretty output.
 
+## Zed Extension
+
+This repository also ships a Zed extension providing language support for
+`Queryfile` (syntax highlighting, comments, brackets). Install it as a dev
+extension via `zed: install dev extension` and select this directory, or
+install from the Zed extensions registry once published.
+
+## Alternatives
+
+| Tool | Focus | How `query` differs |
+|------|-------|---------------------|
+| `make` / `just` | General task runners | SQL-aware named targets, no recipe files to write |
+| `sqitch` / `dbmate` / `sqlx-cli` | Schema migrations | Ad-hoc saved queries, no migration framework |
+| `usql` / `sqlite3` | SQL engines | Adds named-target DX, config, and pretty output |
+
+`query` covers the in-between case: a small, runnable-by-name set of SQL queries
+living next to your database, with no migration framework required.
+
 ## License
 
 GPL-3.0-or-later (GNU General Public License v3 or later)

@@ -1,0 +1,25 @@
+{
+  "Queryfile": {
+    "Queryfile config": {
+      "prefix": "qf",
+      "body": [
+        "# Queryfile — config + named queries for the query runner",
+        "DB=$1",
+        "ENGINE=usql",
+        "OUTPUT=default",
+        "",
+        "$0"
+      ],
+      "description": "Scaffold a Queryfile"
+    },
+    "Named query section": {
+      "prefix": "query",
+      "body": [
+        "[$1]",
+        "$2",
+        ""
+      ],
+      "description": "Add a named query section"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+id = "queryfile"
+name = "Queryfile"
+version = "0.0.1"
+schema_version = 1
+authors = ["Faris Han <farishan@users.noreply.github.com>"]
+description = "Language support for Queryfile: named, runnable SQL queries"
+repository = "https://github.com/farishan/query"
+
+[grammars.queryfile]
+repository = "https://github.com/farishan/tree-sitter-queryfile"
+rev = "5bfedd8e50c8c1f4dcde35a725b391599f4d8d28"
