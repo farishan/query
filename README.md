@@ -12,7 +12,7 @@ query rows-per-table
 One line:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/farishan/query/main/install.sh | bash
+curl -fsSL https://farishan.github.io/query/install.sh | bash
 ```
 
 This installs the `query` runner to `~/.local/bin/query` and scaffolds

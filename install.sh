@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 # One-line install:
-#   curl -fsSL https://raw.githubusercontent.com/farishan/query/main/install.sh | bash
+#   curl -fsSL https://farishan.github.io/query/install.sh | bash
 set -euo pipefail
 
-REPO="farishan/query"
-BRANCH="${BRANCH:-main}"
-RAW="https://raw.githubusercontent.com/$REPO/$BRANCH"
+BASE="${BASE:-https://farishan.github.io/query}"
 BIN_DIR="${BIN_DIR:-$HOME/.local/bin}"
 
 mkdir -p "$BIN_DIR"
 
 echo "Installing 'query' to $BIN_DIR ..."
-curl -fsSL "$RAW/query" -o "$BIN_DIR/query"
+curl -fsSL "$BASE/query" -o "$BIN_DIR/query"
 chmod +x "$BIN_DIR/query"
 
 # Ensure on PATH hint
