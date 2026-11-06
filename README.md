@@ -61,4 +61,4 @@ defaults and pretty output.
 
 ## License
 
-MIT
+GPL-3.0-or-later (GNU General Public License v3 or later)
